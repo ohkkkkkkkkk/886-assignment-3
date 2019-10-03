@@ -1,0 +1,299 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+
+### Q2
+#### Independent rates
+```{r}
+x<-c()
+x[30:40]<-c(30:40)
+
+qx.d.ind<-c()
+qx.d.ind[30:39]<-c(0.00043,0.00042,0.00041,0.0004,0.00041,
+                   0.00042,0.00043,0.00045,0.00049,0.00053)
+
+qx.w.ind<-c()
+qx.w.ind[30:39]<-c(0.250,0.200,0.175,rep(0.150,6),1)
+
+```
+
+#### Dependent rates
+We can now calculate the multiple decrement table. first for deaths.
+```{r}
+qx.d.dep<-c()
+qx.d.dep[30:39]<-qx.d.ind[30:39]*(1-0.5*qx.w.ind[30:39])
+
+```
+
+And then for withdrawls.
+```{r}
+qx.w.dep <- c()
+qx.w.dep[30:39] <- qx.w.ind[30:39]*(1-0.5*qx.d.ind[30:39])
+```
+
+#### Double decrement table
+
+```{r}
+al.x <- c()
+al.x[30] <- 100000
+```
+
+initialise $(ad)_x^d$ and $(ad)_x^w$
+
+
+```{r}
+ad.x.d <- c()
+ad.x.w <- c()
+
+for (j in 30:39) {
+  ad.x.d[j] <- al.x[j]*qx.d.dep[j]
+  ad.x.w[j] <- al.x[j]*qx.w.dep[j]
+  al.x[j+1] <- al.x[j]-ad.x.d[j]-ad.x.w[j]
+}
+
+```
+
+print the results
+```{r}
+lala<-cbind(x[30:40],qx.d.ind[30:40],qx.w.ind[30:40],
+            qx.d.dep[30:40],qx.w.dep[30:40],al.x[30:40],ad.x.d[30:40],ad.x.w[30:40])
+
+colnames(lala)<-c("x","qx.d.ind","qx.w.ind","qx.d.dep","qx.w.dep","al.x","ad.d.x","ad.w.x")
+lala
+
+```
+
+### Unit Fund
+
+#### calculating the possible amounts for an in-force policy
+```{r}
+at<-c(0.45,rep(0.01,9))
+at
+b<-c(rep(0.005,10))
+b
+p<-5000
+
+inv.prems.BoY<-c()
+inv.prems.BoY<-p*(1-at)*(1-b)
+inv.prems.BoY
+
+m<-0.003
+VoU.EoY<-c()
+VoU.EoY[1]<-inv.prems.BoY[1]*1.1*(1-m)
+for (j in 1:9){
+  VoU.EoY[j+1]<-(inv.prems.BoY[j+1]+VoU.EoY[j])*1.1*(1-m)
+}
+VoU.EoY
+```
+
+#### Expected amounts per initial policy
+```{r}
+Einv.prem.BoY<-c()
+for (j in 1:10){
+  Einv.prem.BoY[j]<-inv.prems.BoY[j]*al.x[30+j-1]/al.x[30]
+}
+
+EVoU.EoY<-c()
+for (j in 1:10){
+  EVoU.EoY[j]<-VoU.EoY[j]*al.x[30+j]/al.x[30]
+}
+
+Eint.UL.EoY<-c()
+Eint.UL.EoY[1]<-Einv.prem.BoY[1]*0.1
+for (j in 2:10){
+  Eint.UL.EoY[j]<-(Einv.prem.BoY[j]+EVoU.EoY[j-1])*0.1
+}
+
+transfer.UL<-c()
+transfer.UL[1]<-Einv.prem.BoY[1]+Eint.UL.EoY[1]-EVoU.EoY[1]
+for (j in 2:10){
+  transfer.UL[j]<-Einv.prem.BoY[j]+Eint.UL.EoY[j]+EVoU.EoY[j-1]-EVoU.EoY[j]
+}
+cbind(Einv.prem.BoY,Eint.UL.EoY,EVoU.EoY,transfer.UL)
+
+```
+
+#### Non-unit fund
+FOR AN IN-FORCE POLICY
+```{r}
+premfee.BoY<-at*p
+
+margins.BoY<-b*(p-premfee.BoY)
+
+expenses.NUL.EoY<-c()
+expenses.NUL.EoY[1]<-0.45*p+58
+expenses.NUL.EoY[2:10]<-58*1.2^c(1:9)
+
+Bft.NUL.EoY<-VoU.EoY
+
+cbind(premfee.BoY,margins.BoY,expenses.NUL.EoY,Bft.NUL.EoY)
+```
+
+EXPECTED AMOUNTS PER INITIAL POLICY
+BOY premium based fees, buy-sell margins & expenses
+```{r}
+Epremfee.BoY<-c()
+Emargins.BoY<-c()
+Eexpenses.NUL.EoY<-c()
+
+for (j in 1:10){
+  Epremfee.BoY[j]<-premfee.BoY[j]*al.x[29+j]/al.x[30]
+  Emargins.BoY[j]<-margins.BoY[j]*al.x[29+j]/al.x[30]
+  Eexpenses.NUL.EoY[j]<-expenses.NUL.EoY[j]*al.x[29+j]/al.x[30]
+}
+
+Epremfee.BoY
+Emargins.BoY
+Eexpenses.NUL.EoY
+
+```
+
+```{r}
+Edeath.Bft.EoY<-c()
+Esurr.Bft.EoY<-c() 
+for (j in 1:10){
+  Edeath.Bft.EoY[j]<-Bft.NUL.EoY[j]*ad.x.d[29+j]/al.x[30]
+  Esurr.Bft.EoY[j]<-Bft.NUL.EoY[j]*ad.x.w[29+j]/al.x[30]
+}
+Edeath.Bft.EoY  
+Esurr.Bft.EoY  
+```
+
+```{r}
+Eint.NUL.EoY<-(Epremfee.BoY+Emargins.BoY-Eexpenses.NUL.EoY)*0.08
+Eint.NUL.EoY
+
+transfer.NUL<-Epremfee.BoY+Emargins.BoY-Eexpenses.NUL.EoY+Eint.NUL.EoY+
+              transfer.UL-Edeath.Bft.EoY-Esurr.Bft.EoY 
+transfer.NUL
+
+
+
+```
+profit margin
+```{r}
+
+Etransfer.NUL<-sum(transfer.NUL*1.125^-c(1:10))
+Etransfer.NUL
+
+Etransfer.NUL/p
+
+```
+
+#### part b
+
+```{r}
+q2<-function(s){
+  x<-c()
+  x[30:40]<-c(30:40)
+  
+  qx.d.ind<-c()
+  qx.d.ind[30:39]<-c(0.00043,0.00042,0.00041,0.0004,0.00041,
+                     0.00042,0.00043,0.00045,0.00049,0.00053)
+  
+  qx.w.ind<-c()
+  qx.w.ind[30:39]<-c(0.250,0.200,0.175,rep(0.150,6),1)
+  
+  qx.d.dep<-c()
+  qx.d.dep[30:39]<-qx.d.ind[30:39]*(1-0.5*qx.w.ind[30:39])
+  
+  qx.w.dep <- c()
+  qx.w.dep[30:39] <- qx.w.ind[30:39]*(1-0.5*qx.d.ind[30:39])
+  
+  
+  al.x <- c()
+  al.x[30] <- 100000
+  
+  ad.x.d <- c()
+  ad.x.w <- c()
+  
+  for (j in 30:39) {
+    ad.x.d[j] <- al.x[j]*qx.d.dep[j]
+    ad.x.w[j] <- al.x[j]*qx.w.dep[j]
+    al.x[j+1] <- al.x[j]-ad.x.d[j]-ad.x.w[j]
+  }
+  
+  at<-c(0.45,rep(0.01,9))
+  
+  b<-c(rep(0.005,10))
+  
+  p<-5000
+  
+  inv.prems.BoY<-c()
+  inv.prems.BoY<-p*(1-at)*(1-b)
+  
+  
+  m<-0.003
+  VoU.EoY<-c()
+  VoU.EoY[1]<-inv.prems.BoY[1]*1.1*(1-m)
+  for (j in 1:9){
+    VoU.EoY[j+1]<-(inv.prems.BoY[j+1]+VoU.EoY[j])*1.1*(1-m)
+  }
+  VoU.EoY[9]<-s
+  
+  Einv.prem.BoY<-c()
+  for (j in 1:10){
+    Einv.prem.BoY[j]<-inv.prems.BoY[j]*al.x[30+j-1]/al.x[30]
+  }
+  
+  
+  EVoU.EoY<-c()
+  for (j in 1:10){
+    EVoU.EoY[j]<-VoU.EoY[j]*al.x[30+j]/al.x[30]
+  }
+  
+  Eint.UL.EoY<-c()
+  Eint.UL.EoY[1]<-Einv.prem.BoY[1]*0.1
+  for (j in 2:10){
+    Eint.UL.EoY[j]<-(Einv.prem.BoY[j]+EVoU.EoY[j-1])*0.1
+  }
+  
+  transfer.UL<-c()
+  transfer.UL[1]<-Einv.prem.BoY[1]+Eint.UL.EoY[1]-EVoU.EoY[1]
+  for (j in 2:10){
+    transfer.UL[j]<-Einv.prem.BoY[j]+Eint.UL.EoY[j]+EVoU.EoY[j-1]-EVoU.EoY[j]
+  }
+  
+  premfee.BoY<-at*p
+  
+  margins.BoY<-b*(p-premfee.BoY)
+  
+  expenses.NUL.EoY<-c()
+  expenses.NUL.EoY[1]<-0.45*p+58
+  expenses.NUL.EoY[2:10]<-58*1.2^c(1:9)
+  
+  Bft.NUL.EoY<-VoU.EoY
+  
+  Epremfee.BoY<-c()
+  Emargins.BoY<-c()
+  Eexpenses.NUL.EoY<-c()
+  
+  for (j in 1:10){
+    Epremfee.BoY[j]<-premfee.BoY[j]*al.x[29+j]/al.x[30]
+    Emargins.BoY[j]<-margins.BoY[j]*al.x[29+j]/al.x[30]
+    Eexpenses.NUL.EoY[j]<-expenses.NUL.EoY[j]*al.x[29+j]/al.x[30]
+  }
+  
+  Edeath.Bft.EoY<-c()
+  Esurr.Bft.EoY<-c() 
+  for (j in 1:10){
+    Edeath.Bft.EoY[j]<-Bft.NUL.EoY[j]*ad.x.d[29+j]/al.x[30]
+    Esurr.Bft.EoY[j]<-Bft.NUL.EoY[j]*ad.x.w[29+j]/al.x[30]
+  }
+  
+  Eint.NUL.EoY<-(Epremfee.BoY+Emargins.BoY-Eexpenses.NUL.EoY)*0.08
+  
+  transfer.NUL<-Epremfee.BoY+Emargins.BoY-Eexpenses.NUL.EoY+Eint.NUL.EoY+
+    transfer.UL-Edeath.Bft.EoY-Esurr.Bft.EoY 
+  transfer.NUL[10]
+  
+}
+
+uniroot(q2,c(60000,70000))
+```
+
+
+#### part c
+Decreased. Money has been held back in the Unit Fund at time 9 (rather than being released to shareholders) to give a zero transfer at time 10. Since these additional funds earn only 10% p.a. interest in the Unit Fund, whereas the discount rate is 12.50%, overall the business is now (slightly) less profitable.

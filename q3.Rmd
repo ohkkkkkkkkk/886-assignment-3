@@ -1,0 +1,168 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+### Question 3
+#### part a
+```{r}
+x<-c()
+x[30:40]<-c(30:40)
+
+```
+independent rates
+```{r}
+qx.d.ind<-c()
+qx.d.ind[30:40]<-c(0.00043,0.00042,0.00041,0.0004,0.00041,
+                   0.00042,0.00043,0.00045,0.00049,0.00053)
+
+
+qx.w.ind<-c()
+qx.w.ind[30:39]<-c(0.250,0.200,0.175,rep(0.150,6),1)
+
+```
+
+dependent rates
+```{r}
+qx.d.dep<-c()
+qx.d.dep[30:39]<-qx.d.ind[30:39]*(1-0.5*qx.w.ind[30:39])
+
+qx.w.dep <- c()
+qx.w.dep[30:39] <- qx.w.ind[30:39]*(1-0.5*qx.d.ind[30:39])
+
+
+al.x <- c()
+al.x[30] <- 100000
+
+ad.x.d <- c()
+ad.x.w <- c()
+
+for (j in 30:39) {
+  ad.x.d[j] <- al.x[j]*qx.d.dep[j]
+  ad.x.w[j] <- al.x[j]*qx.w.dep[j]
+  al.x[j+1] <- al.x[j]-ad.x.d[j]-ad.x.w[j]
+}
+
+lala<-cbind(x[30:40],qx.d.ind[30:40],qx.w.ind[30:40],
+            qx.d.dep[30:40],qx.w.dep[30:40],al.x[30:40],ad.x.d[30:40],ad.x.w[30:40])
+
+colnames(lala)<-c("x","qx.d.ind","qx.w.ind","qx.d.dep","qx.w.dep","al.x","ad.d.x","ad.w.x")
+lala
+```
+
+#### unit link
+calculating the possible amounts for an in-force policy
+```{r}
+at<-c(0.45,rep(0.01,9))
+b<-c(rep(0.005,10))
+p<-5000
+s=20000
+
+
+inv.prems.BoY<-c()
+inv.prems.BoY<-p*(1-at)*(1-b)-s*qx.d.ind[30:39]*1.2
+
+m<-0.003
+VoU.EoY<-c()
+VoU.EoY[1]<-inv.prems.BoY[1]*1.1*(1-m)
+for (j in 1:9){
+  VoU.EoY[j+1]<-(inv.prems.BoY[j+1]+VoU.EoY[j])*1.1*(1-m)
+}
+cbind(inv.prems.BoY,VoU.EoY)
+```
+Expected amounts per initial policy
+```{r}
+Einv.prem.BoY<-c()
+for (j in 1:10){
+  Einv.prem.BoY[j]<-inv.prems.BoY[j]*al.x[30+j-1]/al.x[30]
+}
+
+EVoU.EoY<-c()
+for (j in 1:10){
+  EVoU.EoY[j]<-VoU.EoY[j]*al.x[30+j]/al.x[30]
+}
+
+Eint.UL.EoY<-c()
+Eint.UL.EoY[1]<-Einv.prem.BoY[1]*0.1
+for (j in 2:10){
+  Eint.UL.EoY[j]<-(Einv.prem.BoY[j]+EVoU.EoY[j-1])*0.1
+}
+
+transfer.UL<-c()
+transfer.UL[1]<-Einv.prem.BoY[1]+Eint.UL.EoY[1]-EVoU.EoY[1]
+for (j in 2:10){
+  transfer.UL[j]<-Einv.prem.BoY[j]+Eint.UL.EoY[j]+EVoU.EoY[j-1]-EVoU.EoY[j]
+}
+
+cbind(Einv.prem.BoY,EVoU.EoY,Eint.UL.EoY,transfer.UL)
+
+```
+
+#### Non-unit fund
+```{r}
+premfee.BoY<-at*p
+
+
+margins.BoY<-b*(p-premfee.BoY)
+
+
+insur.charges.EoY<-s*qx.d.ind[30:39]*1.2
+
+
+
+expenses.NUL.EoY<-c()
+expenses.NUL.EoY[1]<-0.45*p+75
+expenses.NUL.EoY[2:10]<-75*1.25^c(1:9)
+
+
+D.Bft.NUL.EoY<-VoU.EoY+s
+
+
+S.Bft.NUL.EoY<-VoU.EoY
+
+cbind(premfee.BoY,margins.BoY,insur.charges.EoY,expenses.NUL.EoY,D.Bft.NUL.EoY,S.Bft.NUL.EoY)
+```
+#### EXPECTED AMOUNTS PER INITIAL POLICY
+```{r}
+Epremfee.BoY<-c()
+Emargins.BoY<-c()
+Eexpenses.NUL.EoY<-c()
+Einsur.charges.EoY<-c()
+
+for (j in 1:10){
+  Epremfee.BoY[j]<-premfee.BoY[j]*al.x[29+j]/al.x[30]
+  Emargins.BoY[j]<-margins.BoY[j]*al.x[29+j]/al.x[30]
+  Einsur.charges.EoY[j]<-insur.charges.EoY[j]*al.x[29+j]/al.x[30]
+  Eexpenses.NUL.EoY[j]<-expenses.NUL.EoY[j]*al.x[29+j]/al.x[30]
+}
+
+Edeath.Bft.EoY<-c()
+Esurr.Bft.EoY<-c() 
+for (j in 1:10){
+  Edeath.Bft.EoY[j]<-D.Bft.NUL.EoY[j]*ad.x.d[29+j]/al.x[30]
+  Esurr.Bft.EoY[j]<-S.Bft.NUL.EoY[j]*ad.x.w[29+j]/al.x[30]
+}
+
+
+Eint.NUL.EoY<-(Epremfee.BoY+Emargins.BoY+Einsur.charges.EoY-Eexpenses.NUL.EoY)*0.08
+
+
+transfer.NUL<-Epremfee.BoY+Emargins.BoY+Einsur.charges.EoY-Eexpenses.NUL.EoY+Eint.NUL.EoY+
+  transfer.UL-Edeath.Bft.EoY-Esurr.Bft.EoY 
+transfer.NUL
+cbind(Epremfee.BoY,Emargins.BoY,Eexpenses.NUL.EoY,Einsur.charges.EoY,Edeath.Bft.EoY,Esurr.Bft.EoY,Eint.NUL.EoY,transfer.NUL)
+
+```
+
+
+```{r}
+Etransfer.NUL<-sum(transfer.NUL*1.125^-c(1:10))
+Etransfer.NUL
+Etransfer.NUL/p
+```
+
+```{r}
+q3<-function(i){sum(transfer.NUL*(1+i)^-c(1:10))}
+uniroot(q3,c(-2,1))
+```
+

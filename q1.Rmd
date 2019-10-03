@@ -1,0 +1,186 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+
+### Question 1
+
+#### Part a
+##### Decrement table
+Need a vector of ages x and the two vectors of independent rates, q_x^d and q_x^w.
+```{r}
+x<-c()
+x[55:58]<-c(55:58)
+
+qx<-c()
+qx[55:57]<-c(0.001046,0.001199,0.001375)
+```
+
+Choose the radix as $l_0=10000$, use the formulae $l_{x+1}=l_x*(1-q_x)$.
+```{r}
+lx<-c()
+lx[55]<-10000
+
+for (j in 55:58){
+  lx[j+1]<-lx[j]*(1-qx[j])
+}
+```
+Print all the decrement detail.
+```{r}
+haha<-cbind(x[55:58],lx[55:58],qx[55:58])
+colnames(haha)<-c("x","lx","qx")
+haha
+```
+
+we can calculate the policy values using tabulated annuity and assurance functions as below.$$_tV=Sa_{x+t\,\overline{n-t}|}\,@4\,\%$$ The effective interest is 4% because the benefits are increasing geometrically.$$0.04=\frac{1.06}{1.0192308}-1$$
+
+We can use recursive formulae or use the relation between annuity and assurance.
+
+$${a}_{x+t\,\overline{n-t}|}=vp_{x}(1+{a}_{x+t+1\,\overline{n-t-1}|})$$
+$${a}_{x+t\,\overline{n-t}|}=\frac{v-{A}_{x+t\,\overline{n-t}|}}{d}$$
+
+```{r}
+px<-c()
+px[55:57]<-1-qx[55:57]
+
+a.PV<-c()
+v<-1.0192308/1.06
+a.PV[57]<-1*v*px[57]
+a.PV[58]<-0
+
+for (j in 57:56){
+  a.PV[j-1]<-v*px[j-1]*(1+a.PV[j])
+}
+cbind(x[55:57],px[55:57],a.PV[55:57])
+```
+
+#### In-force cash flows
+For this three year temporary annuity policy, we need the vectors of
+1.	Premia
+2.	Expenses
+3.	Benefits
+4.	Policy values
+
+```{r}
+t<-c(1:3)
+prems.BoY<-c(40250,0,0)
+
+initial.expenses.BoY<-c()
+initial.expenses.BoY[1]<-100+0.015*prems.BoY[1]
+initial.expenses.BoY[2:3]<-c(0,0)
+
+
+pay.expenses.BoY<-c()
+expenses.inflation<-1.05^(0:2)
+pay.expenses.BoY[1:3]<-10*expenses.inflation
+
+benefits.EoY<-15000*(1.0192308)^c(0:2)
+
+
+policy.EoY<-c()
+policy.EoY[55:57]<-benefits.EoY[1:3]*a.PV[56:58]
+
+
+wawa<-cbind(t,prems.BoY[1:3],initial.expenses.BoY[1:3],pay.expenses.BoY[1:3],benefits.EoY[1:3],policy.EoY[55:57])
+colnames(wawa)<-c("year","prems.BoY","initial.expenses.BoY","pay.expenses.BoY",
+                 "benefits.EoY","policy.EoY")
+wawa
+```
+
+#### Expected amounts per sold policy
+Here we need vectors of
+1.	expected premium
+2.	expected expenses
+3.  Benefits
+4.	expected transfer 
+5.	expected interest earned
+6.	expected policy value 
+
+```{r}
+Eprem.BoY <- c()
+for (j in 1:3){
+  Eprem.BoY[j]<-prems.BoY[j]*lx[j+54]/lx[55]
+}
+Eprem.BoY
+
+```
+
+```{r}
+Eexp1.BoY <- c()
+for (j in 1:3){
+  Eexp1.BoY[j]<-initial.expenses.BoY[j]*lx[j+54]/lx[55]
+}
+Eexp1.BoY
+```
+
+```{r}
+Eexp2.BoY <- c()
+for (j in 1:3){
+  Eexp2.BoY[j]<-pay.expenses.BoY[j]*lx[j+55]/lx[55]
+}
+Eexp2.BoY
+```
+
+
+```{r}
+Ebft.EoY <- c()
+for (j in 55:57){
+  Ebft.EoY[j]<-benefits.EoY[j-54]*lx[j+1]/lx[55]
+}
+Ebft.EoY 
+```
+
+```{r}
+Epolval.EoY <- c()
+for (j in 55:57){
+  Epolval.EoY[j]<-policy.EoY[j]*lx[j+1]/lx[55]
+}
+Epolval.EoY 
+```
+
+```{r}
+i<-0.08
+
+Einterest <- c()
+Einterest[1] <- (Eprem.BoY[1]-Eexp1.BoY[1])*i
+Einterest[2:3] <- (Eprem.BoY[2:3]-Eexp1.BoY[2:3]+Epolval.EoY[55:56])*i
+Einterest
+
+
+EPolValChg <- c()
+EPolValChg[55] <- Epolval.EoY[55]
+EPolValChg[56:57] <- Epolval.EoY[56:57]-Epolval.EoY[55:56]
+EPolValChg
+```
+
+The profit signature shows as below
+```{r}
+ETransfer <-Eprem.BoY-Eexp1.BoY-Eexp2.BoY-Ebft.EoY+Einterest-EPolValChg
+ETransfer
+```
+
+
+the expected net present value of profits is 201.6858 and the profit margin is 0.005010827.
+```{r}
+EPVPremsER <- sum(Eprem.BoY/(1.12)^(0:2))
+EPVPremsER
+
+EPVTransfersER <- sum(ETransfer[55:57]/(1.12)^(1:3))
+EPVTransfersER 
+
+```
+
+```{r}
+ProfMargER <- EPVTransfersER/EPVPremsER
+ProfMargER
+```
+
+#### part b
+the yield on transfers is 0.5028818.
+```{r}
+q1<-function(i){sum(ETransfer[55:57]/(1+i)^(1:3))}
+uniroot(q1,c(0.4,0.6))
+```
+
+
